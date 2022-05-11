@@ -1,8 +1,6 @@
 import type { NextPage } from "next";
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { Circle, GoogleMap, Marker, withScriptjs } from "react-google-maps";
-import withGoogleMap from "react-google-maps/lib/withGoogleMap";
+import { GameMap } from "../components/GameMap";
 import styles from "../styles/Home.module.css";
 
 function pickAndPop<T>(array: T[]) {
@@ -24,45 +22,6 @@ interface MapProps {
   onChange?: () => void;
 }
 
-const Map = withScriptjs(
-  withGoogleMap((props: MapProps) => (
-    <GoogleMap
-      key="1"
-      defaultZoom={5}
-      ref={props.onMapMounted}
-      defaultCenter={{ lat: 59.95, lng: 10.5 }}
-      options={{ gestureHandling: "greedy" }}
-      onClick={(e) => {
-        props.onChange?.(e.latLng);
-      }}
-    >
-      {props.marker && (
-        <Marker
-          position={props.marker}
-          draggable
-          onDragEnd={(e) => props.onChange(e.latLng)}
-        />
-      )}
-      {props.circle && (
-        <Circle
-          center={props.circle.center}
-          options={{
-            strokeColor: "#1c5dff",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#1c5dff",
-            fillOpacity: 0.1,
-          }}
-          radius={props.circle.radius}
-          onClick={(e) => {
-            props.onChange?.(e.latLng);
-          }}
-        />
-      )}
-    </GoogleMap>
-  ))
-);
-
 const Home: NextPage = () => {
   const [vehicles, setVehicles] = useState<any[] | null>(null);
   const [level, setLevel] = useState(0);
@@ -73,9 +32,7 @@ const Home: NextPage = () => {
     center: { lat: 59.95, lng: 10.5 },
     radius: 600000,
   });
-  const [gameState, setGameState] = useState<"playing" | "win" | "lose">(
-    "playing"
-  );
+  const [gameState, setGameState] = useState<"playing" | "win" | "lose">("win");
   const mapRef = useRef<any>(null);
   useEffect(() => {
     const now = new Date(+new Date() + 1000 * 60 * 60 * 24 * 14);
@@ -166,7 +123,7 @@ const Home: NextPage = () => {
                 pointerEvents: gameState === "playing" ? "auto" : "none",
               }}
             >
-              <Map
+              <GameMap
                 onMapMounted={(map) => {
                   if (map) {
                     mapRef.current = map;
@@ -242,11 +199,43 @@ const Home: NextPage = () => {
               The car is somewhere within the blue circle. This is guess number{" "}
               {level + 1}. You have {4 - level} attempts remaining.
             </div>
+            <div style={{ height: 128 }} />
           </>
         )}
 
-        <div style={{ height: 128 }} />
-        <div>You win!</div>
+        {gameState === "win" && (
+          <div>
+            <div style={{ fontSize: "24px", fontWeight: "bold" }}>You win!</div>
+
+            <div
+              style={{
+                width: "100%",
+                boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.06)",
+                height: 480,
+                marginTop: 32,
+                borderRadius: 16,
+                overflow: "hidden",
+                position: "relative",
+                pointerEvents: "none",
+              }}
+            >
+              <GameMap
+                onMapMounted={(map) => {
+                  if (map) {
+                    mapRef.current = map;
+                  }
+                }}
+                circle={circle}
+                marker={marker}
+                loadingElement={<div style={{ height: `100%` }} />}
+                containerElement={<div style={{ height: `100%` }} />}
+                mapElement={<div style={{ height: `100%` }} />}
+                googleMapURL="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing,places&key=AIzaSyBrPsXcvS0lOSrlOQQZQQ0x5IywJvv5PQI"
+                onChange={setMarker}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
