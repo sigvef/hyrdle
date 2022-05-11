@@ -66,8 +66,8 @@ const Home: NextPage = () => {
       return;
     }
     setGameState("win");
-    const dLng = (marker.lng - answerPoint.lng);
-    const dLat = (marker.lat - answerPoint.lat);
+    const dLng = marker.lng - answerPoint.lng;
+    const dLat = marker.lat - answerPoint.lat;
     const bounds = {
       north: Math.max(answerPoint.lat - dLat, answerPoint.lat + dLat),
       south: Math.min(answerPoint.lat - dLat, answerPoint.lat + dLat),
