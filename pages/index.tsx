@@ -15,10 +15,9 @@ function pickAndPop<T>(array: T[]) {
 const Home: NextPage = () => {
   const [vehicles, setVehicles] = useState<any[] | null>(null);
   const [level, setLevel] = useState(0);
-  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>({
-    lat: 59.9,
-    lng: 10.5,
-  });
+  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
   const [circle, setCircle] = useState({
     center: { lat: 59.95, lng: 10.5 },
     radius: 600000,
