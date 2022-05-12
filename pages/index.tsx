@@ -135,6 +135,13 @@ const Home: NextPage = () => {
           />
         )}
 
+        {!isGameDone && (
+          <div style={{ marginTop: 32 }}>
+            The car is somewhere within the blue circle. This is guess number{" "}
+            {level + 1}. You have {5 - level} attempts remaining.
+          </div>
+        )}
+
         <div
           style={{
             width: "100%",
@@ -249,12 +256,6 @@ const Home: NextPage = () => {
               </div>
               <div>https://hyrdle.xyz</div>
             </div>
-          </div>
-        )}
-        {!isGameDone && (
-          <div style={{ marginTop: 32 }}>
-            The car is somewhere within the blue circle. This is guess number{" "}
-            {level + 1}. You have {5 - level} attempts remaining.
           </div>
         )}
         <div style={{ height: 128 }} />
