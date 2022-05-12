@@ -124,8 +124,8 @@ const Home: NextPage = () => {
           <div
             style={{
               boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.16)",
-              width: 640,
-              height: 360,
+              width: "100%",
+              aspectRatio: (16 / 9).toString(),
               borderRadius: 16,
               background: `black url(${currentVehicle.vehicle_station.image.url.replace(
                 "__cover_640x480.jpg",
