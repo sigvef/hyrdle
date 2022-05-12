@@ -196,7 +196,7 @@ const Home: NextPage = () => {
               }
 
               /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
-              const newRadius = Math.pow(circle.radius, 0.75);
+              const newRadius = Math.pow(circle.radius, 0.8);
               const r = newRadius * Math.sqrt(Math.random());
               const theta = Math.random() * 360;
               //@ts-expect-error
