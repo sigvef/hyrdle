@@ -231,12 +231,28 @@ const Home: NextPage = () => {
           </button>
         )}
         {isGameDone && (
-          <div style={{ marginTop: 32 }}>
-            <div>
+          <div
+            style={{
+              marginTop: 32,
+              display: "flex",
+              alignItems: "center",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ marginBottom: 32 }}>
               You guessed <strong>{distance}m</strong> away from the car.
             </div>
             <button className={styles.guessButton}>Share</button>
-            <div style={{ marginTop: 32, fontWeight: "bold" }}>
+            <div
+              style={{
+                marginTop: 32,
+                fontWeight: "bold",
+                background: "#ffffff",
+                padding: "16px 32px",
+                borderRadius: 16,
+                color: "#000130",
+              }}
+            >
               <div>Hyrdle #1</div>
               <div style={{ display: "flex", alignItems: "center" }}>
                 {[...new Array(5)].map((_, i) => (
