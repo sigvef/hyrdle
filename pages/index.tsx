@@ -25,6 +25,7 @@ const Home: NextPage = () => {
   const [gameState, setGameState] = useState<
     "loading" | "playing" | "win" | "lose"
   >("loading");
+  const [hasShared, setHasShared] = useState(false);
   const mapRef = useRef<any>(null);
   useEffect(() => {
     const now = new Date(+new Date() + 1000 * 60 * 60 * 24 * 14);
@@ -242,7 +243,32 @@ const Home: NextPage = () => {
             <div style={{ marginBottom: 32 }}>
               You guessed <strong>{distance}m</strong> away from the car.
             </div>
-            <button className={styles.guessButton}>Share</button>
+            <button
+              className={styles.guessButton}
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `Hyrdle #1
+                ${[...new Array(5)]
+                  .map((_, i) => {
+                    if (i === level) {
+                      return gameState === "lose" ? "🟥" : "🟩";
+                    }
+                    if (i <= level) {
+                      return "🟥";
+                    }
+                    return "⬛";
+                  })
+                  .join("")} {distance}m
+                https://hyrdle.xyz`
+                    .split("\n")
+                    .map((x) => x.trim())
+                    .join("\n")
+                );
+                setHasShared(true);
+              }}
+            >
+              {hasShared ? "Copied!" : "Share"}
+            </button>
             <div
               style={{
                 marginTop: 32,
