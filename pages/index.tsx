@@ -100,7 +100,7 @@ const Home: NextPage = () => {
               width: "100%",
               aspectRatio: (16 / 9).toString(),
               borderRadius: 16,
-              background: `black url(${currentVehicle.image.replace(
+              background: `#888 url(${currentVehicle.image.replace(
                 "__cover_640x480.jpg",
                 "__cover_1920x1080.jpg"
               )}) no-repeat center / contain`,
