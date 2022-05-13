@@ -1,17 +1,8 @@
 import type { NextPage } from "next";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { GameMap } from "../components/GameMap";
 import styles from "../styles/Home.module.css";
 import vehicles from "../data.json";
-
-function pickAndPop<T>(array: T[]) {
-  if (array.length >= 1) {
-    const index = (Math.random() * array.length) | 0;
-    const valueToReturn = array[index];
-    array[index] = array.pop()!;
-    return valueToReturn;
-  }
-}
 
 const Home: NextPage = () => {
   const [level, setLevel] = useState(0);
