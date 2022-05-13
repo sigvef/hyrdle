@@ -2,6 +2,7 @@ import type { NextPage } from "next";
 import { useEffect, useRef, useState } from "react";
 import { GameMap } from "../components/GameMap";
 import styles from "../styles/Home.module.css";
+import vehicles from "../data.json";
 
 function pickAndPop<T>(array: T[]) {
   if (array.length >= 1) {
@@ -13,7 +14,6 @@ function pickAndPop<T>(array: T[]) {
 }
 
 const Home: NextPage = () => {
-  const [vehicles, setVehicles] = useState<any[] | null>(null);
   const [level, setLevel] = useState(0);
   const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
     null
@@ -24,34 +24,14 @@ const Home: NextPage = () => {
   });
   const [gameState, setGameState] = useState<
     "loading" | "playing" | "win" | "lose"
-  >("loading");
+  >("playing");
   const [hasShared, setHasShared] = useState(false);
   const mapRef = useRef<any>(null);
-  useEffect(() => {
-    const now = new Date(+new Date() + 1000 * 60 * 60 * 24 * 14);
-    fetch(
-      `https://api.hyre.no/community_vehicle_stations/?start_time=${now.toISOString()}&end_time=${now.toISOString()}`
-    )
-      .then((x) => x.json())
-      .then((data) => {
-        const results = data.results;
-        const vehicles = [];
-        vehicles[0] = pickAndPop(results);
-        setVehicles(vehicles);
-        setGameState("playing");
-      })
-      .catch((error) => console.error(error));
-  }, []);
-
-  if (!vehicles) {
-    return <div>Loading</div>;
-  }
-
   const currentVehicle = vehicles[0];
 
   const answerPoint = {
-    lat: currentVehicle.vehicle_station.parking_spot.point[1],
-    lng: currentVehicle.vehicle_station.parking_spot.point[0],
+    lat: currentVehicle.point[1],
+    lng: currentVehicle.point[0],
   };
 
   const distance =
@@ -128,7 +108,7 @@ const Home: NextPage = () => {
               width: "100%",
               aspectRatio: (16 / 9).toString(),
               borderRadius: 16,
-              background: `black url(${currentVehicle.vehicle_station.image.url.replace(
+              background: `black url(${currentVehicle.image.replace(
                 "__cover_640x480.jpg",
                 "__cover_1920x1080.jpg"
               )}) no-repeat center / contain`,
