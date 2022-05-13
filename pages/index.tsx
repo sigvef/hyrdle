@@ -230,7 +230,7 @@ const Home: NextPage = () => {
                     }
                     return "⬛";
                   })
-                  .join("")} {distance}m
+                  .join("")} ${distance}m
                 https://hyrdle.xyz`
                     .split("\n")
                     .map((x) => x.trim())
