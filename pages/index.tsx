@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { GameMap } from "../components/GameMap";
 import styles from "../styles/Home.module.css";
 import vehicles from "../data.json";
+import NextImage from "next/image";
 
 const Home: NextPage = () => {
   const [level, setLevel] = useState(0);
@@ -78,15 +79,15 @@ const Home: NextPage = () => {
           alignItems: "center",
         }}
       >
-        <img
-          src="/hyrdle.svg"
-          alt=""
+        <div
           style={{
             display: "block",
             marginTop: 32,
             marginBottom: 32,
           }}
-        />
+        >
+          <NextImage width={168} height={26} src="/hyrdle.svg" alt="Hyrdle" />
+        </div>
         {!isGameDone && (
           <div style={{ marginBottom: 32 }}>
             Where is today&apos;s car? Find it on the map!
