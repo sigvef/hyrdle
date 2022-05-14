@@ -1,29 +1,112 @@
 import type { NextPage } from "next";
-import { useRef, useState } from "react";
-import { GameMap } from "../components/GameMap";
+import { useEffect, useRef, useState } from "react";
+import {
+  GameMap,
+  getBoundsFromCircle,
+  LatLngLiteral,
+} from "../components/GameMap";
 import styles from "../styles/Home.module.css";
 import vehicles from "../data.json";
 import NextImage from "next/image";
+var seedrandom = require("seedrandom");
+
+function useLocalStorage<T>(key: string, defaultValue: T) {
+  const storage =
+    typeof window === "undefined"
+      ? { getItem: () => null, setItem: () => null, removeItem: () => null }
+      : localStorage;
+  const [state, _setState] = useState<T>(defaultValue);
+  const setState = (value: T) => {
+    storage.setItem(key, JSON.stringify(value));
+    _setState(value);
+  };
+  return [state, setState] as const;
+}
 
 const Home: NextPage = () => {
-  const [level, setLevel] = useState(0);
-  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
-  const [circle, setCircle] = useState({
+  const dayOffset = 19125;
+  /* Needs to be a ref so we don't accidentally switch days while playing. */
+  const currentDay = useRef((+new Date() / 1000 / 60 / 60 / 24) | 0);
+  const todaysIndex = currentDay.current - dayOffset;
+
+  function makeKey(k: string) {
+    return `hyrdle.xyz:${todaysIndex}:${k}`;
+  }
+
+  const [markers, setMarkers] = useLocalStorage<
+    {
+      lat: number;
+      lng: number;
+    }[]
+  >(makeKey("markers"), []);
+  const [marker, setMarker] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [circle, setCircle] = useLocalStorage(makeKey("circle"), {
     center: { lat: 59.95, lng: 10.5 },
     radius: 600000,
   });
-  const [gameState, setGameState] = useState<
-    "loading" | "playing" | "win" | "lose"
-  >("playing");
+  const [gameState, setGameState] = useLocalStorage<"playing" | "win" | "lose">(
+    makeKey("gameState"),
+    "playing"
+  );
+
+  const [redrawForcer, setRedrawForcer] = useState("not-loaded");
+  const forceRedrawAfterMapLoadedOnce = () => {
+    setRedrawForcer("loaded");
+  };
+
+  useEffect(() => {
+    /* Remove old keys. */
+    Object.keys(localStorage)
+      .filter((key) => +key.split(":")[1] < todaysIndex)
+      .forEach((key) => localStorage.removeItem(key));
+
+    for (const [key, setter] of [
+      ["markers", setMarkers],
+      ["circle", setCircle],
+      ["gameState", setGameState],
+    ] as const) {
+      try {
+        const value = JSON.parse(localStorage.getItem(makeKey(key)) || "null");
+        if (value !== null) {
+          setter(value);
+        }
+      } catch {}
+    }
+
+    /* Show your final guess, if you load the page after you are done playing. */
+    const markers = JSON.parse(
+      localStorage.getItem(makeKey("markers")) || "[]"
+    );
+    if (markers.length >= 5) {
+      setMarker(markers.pop());
+    }
+  }, []);
+
   const [hasShared, setHasShared] = useState(false);
   const mapRef = useRef<any>(null);
-  const currentVehicle = vehicles[0];
+  const currentVehicle = vehicles[todaysIndex];
+  const level = markers.length;
+
+  const random = useRef(seedrandom(todaysIndex));
 
   const answerPoint = {
     lat: currentVehicle.point[1],
     lng: currentVehicle.point[0],
+  };
+
+  const fitMapToCircleBounds = ({
+    center,
+    radius,
+  }: {
+    center: LatLngLiteral;
+    radius: number;
+  }) => {
+    const maps = window.google.maps;
+    const bounds = getBoundsFromCircle({ center, radius });
+    mapRef.current.fitBounds(bounds, 16);
   };
 
   const distance =
@@ -34,11 +117,11 @@ const Home: NextPage = () => {
         )
       : -1) | 0;
 
-  const win = () => {
+  const endGame = (state: "win" | "lose") => {
     if (!marker) {
       return;
     }
-    setGameState("win");
+    setGameState(state);
     const dLng = marker.lng - answerPoint.lng;
     const dLat = marker.lat - answerPoint.lat;
     const bounds = {
@@ -47,13 +130,61 @@ const Home: NextPage = () => {
       east: Math.max(answerPoint.lng - dLng, answerPoint.lng + dLng),
       west: Math.min(answerPoint.lng - dLng, answerPoint.lng + dLng),
     };
-    console.log("bsd", marker, answerPoint, dLng, dLat, bounds);
     if (mapRef.current) {
       mapRef.current?.fitBounds(bounds, 32);
     }
   };
 
   const isGameDone = gameState === "win" || gameState === "lose";
+
+  const makeGuess = (marker: LatLng) => {
+    const newLevel = level + 1;
+    //@ts-expect-error
+    const maps = google.maps;
+
+    const guessedDistance = maps.geometry.spherical.computeDistanceBetween(
+      answerPoint,
+      marker
+    );
+    if (marker !== null && markers.length < 5) {
+      setMarkers([...markers, marker]);
+    }
+    if (guessedDistance <= 50) {
+      endGame("win");
+      return;
+    } else if (newLevel > 4) {
+      endGame("lose");
+      return;
+    }
+    setMarker(null);
+
+    /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
+    const newRadius = Math.pow(circle.radius, 0.8);
+    const r = newRadius * Math.sqrt(random.current());
+    const theta = random.current() * 360;
+    //@ts-expect-error
+    const latLng = google.maps.geometry.spherical
+      .computeOffset(answerPoint, r, theta)
+      .toJSON();
+
+    const newCircle = {
+      center: latLng,
+      radius: newRadius,
+    };
+    setCircle(newCircle);
+    fitMapToCircleBounds(newCircle);
+  };
+
+  useEffect(() => {
+    try {
+      const markers = JSON.parse(
+        localStorage.getItem(makeKey("markers")) || "null"
+      );
+      markers.forEach((marker) => {
+        makeGuess(marker);
+      });
+    } catch {}
+  }, []);
 
   return (
     <div
@@ -130,6 +261,10 @@ const Home: NextPage = () => {
             onMapMounted={(map: any) => {
               if (map) {
                 mapRef.current = map;
+                forceRedrawAfterMapLoadedOnce();
+                if (map && circle && circle.radius !== 600000) {
+                  map.fitBounds(getBoundsFromCircle(circle), 16);
+                }
               }
             }}
             circle={isGameDone ? null : circle}
@@ -150,55 +285,7 @@ const Home: NextPage = () => {
           <button
             className={styles.guessButton}
             style={{ marginTop: -64 - 16, marginBottom: 32 }}
-            onClick={() => {
-              const newLevel = level + 1;
-              //@ts-expect-error
-              const maps = google.maps;
-
-              const guessedDistance =
-                maps.geometry.spherical.computeDistanceBetween(
-                  answerPoint,
-                  marker
-                );
-              if (guessedDistance <= 50) {
-                win();
-                return;
-              } else if (newLevel > 4) {
-                setGameState("lose");
-                return;
-              }
-
-              /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
-              const newRadius = Math.pow(circle.radius, 0.8);
-              const r = newRadius * Math.sqrt(Math.random());
-              const theta = Math.random() * 360;
-              //@ts-expect-error
-              const latLng = google.maps.geometry.spherical
-                .computeOffset(answerPoint, r, theta)
-                .toJSON();
-
-              setLevel(newLevel);
-              setMarker(null);
-              setCircle({
-                center: latLng,
-                radius: newRadius,
-              });
-              const bounds = {
-                north: maps.geometry.spherical
-                  .computeOffset(latLng, newRadius, 0)
-                  .lat(),
-                east: maps.geometry.spherical
-                  .computeOffset(latLng, newRadius, 90)
-                  .lng(),
-                south: maps.geometry.spherical
-                  .computeOffset(latLng, newRadius, 180)
-                  .lat(),
-                west: maps.geometry.spherical
-                  .computeOffset(latLng, newRadius, 270)
-                  .lng(),
-              };
-              mapRef.current.fitBounds(bounds, 16);
-            }}
+            onClick={() => makeGuess(marker)}
           >
             Make a guess
           </button>
@@ -219,7 +306,7 @@ const Home: NextPage = () => {
               className={styles.guessButton}
               onClick={() => {
                 navigator.clipboard.writeText(
-                  `Hyrdle #1
+                  `Hyrdle #${todaysIndex}
                 ${[...new Array(5)]
                   .map((_, i) => {
                     if (i === level) {
@@ -251,7 +338,7 @@ const Home: NextPage = () => {
                 color: "#000130",
               }}
             >
-              <div>Hyrdle #1</div>
+              <div>Hyrdle #{todaysIndex}</div>
               <div style={{ display: "flex", alignItems: "center" }}>
                 {[...new Array(5)].map((_, i) => (
                   <span key={i} style={{ padding: 2 }}>

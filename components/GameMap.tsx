@@ -27,6 +27,16 @@ const lineSymbol = {
   scale: 4,
 };
 
+export const getBoundsFromCircle = ({ center, radius }) => {
+  const maps = window.google.maps;
+  return {
+    north: maps.geometry.spherical.computeOffset(center, radius, 0).lat(),
+    east: maps.geometry.spherical.computeOffset(center, radius, 90).lng(),
+    south: maps.geometry.spherical.computeOffset(center, radius, 180).lat(),
+    west: maps.geometry.spherical.computeOffset(center, radius, 270).lng(),
+  };
+};
+
 export const GameMap = withScriptjs(
   withGoogleMap((props: GameMapProps) => (
     <GoogleMap
