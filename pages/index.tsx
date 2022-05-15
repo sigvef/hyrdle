@@ -352,6 +352,13 @@ const Home: NextPage = () => {
                 </div>
                 <div>https://hyrdle.xyz</div>
               </div>
+
+              <a
+                href={`https://link.hyre.no/h?communityvehiclestation=${currentVehicle.id}`}
+                style={{ marginTop: 32, textDecoration: "underline" }}
+              >
+                Open in the Hyre app.
+              </a>
             </div>
           )}
         </div>
