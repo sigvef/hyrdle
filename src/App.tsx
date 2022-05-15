@@ -289,7 +289,7 @@ const App = () => {
               }}
             >
               <div style={{ marginBottom: 32 }}>
-                You guessed <strong>{distance}m</strong> away from the car.
+                Your guess was <strong>{distance}m</strong> away from the car.
               </div>
               <button
                 className={styles.guessButton}
