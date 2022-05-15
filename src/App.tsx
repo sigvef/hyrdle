@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GameMap, getBoundsFromCircle, LatLngLiteral } from "./GameMap";
-import styles from "./Home.module.css";
+import styles from "./App.module.css";
 import vehicles from "./data.json";
 import { useGoogleMaps } from "./googlemaps";
 import { useDay } from "./utils";
@@ -114,7 +114,7 @@ const App = () => {
       const value = evaluateWinCondition(
         answerPoint,
         markers[markers.length - 1],
-        5,
+        markers.length,
         maps
       );
       if (value) {
@@ -213,7 +213,6 @@ const App = () => {
           style={{
             transition: "all 0.15s ease-out",
             opacity: hasLoaded ? 1 : 0,
-            transform: `translate3d(0px, ${hasLoaded ? 0 : 8}px, 0px)`,
             width: "100%",
             display: "flex",
             flexDirection: "column",
