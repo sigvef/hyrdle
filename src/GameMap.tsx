@@ -38,7 +38,7 @@ export const getBoundsFromCircle = ({ center, radius }: CircleLiteral) => {
 
 export const GameMap = (props: GameMapProps) => {
   const { mapsPromise } = useGoogleMaps();
-  const id = useId();
+  const id = "map";
   const circleObj = useRef<google.maps.Circle | null>();
   const carMarkerObj = useRef<google.maps.Marker | null>();
   const markerObj = useRef<google.maps.Marker | null>();
@@ -46,7 +46,9 @@ export const GameMap = (props: GameMapProps) => {
   const [mapPromise] = useState<Promise<google.maps.Map>>(
     () =>
       new Promise(async (resolve) => {
-        const map = new (await mapsPromise).Map(document.getElementById(id)!, {
+        const maps = await mapsPromise;
+        const div = document.getElementById(id)!;
+        const map = new (await mapsPromise).Map(div, {
           center: { lat: 59.95, lng: 10.5 },
           zoom: 5,
           gestureHandling: "greedy",

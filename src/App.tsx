@@ -258,6 +258,7 @@ const App = () => {
             }}
           >
             <GameMap
+              key="1"
               onMap={(map) => (mapRef.current = map)}
               circle={isGameDone ? null : circle}
               marker={marker || undefined}
