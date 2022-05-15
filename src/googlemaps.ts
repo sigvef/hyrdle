@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 const mapsPromise = new Promise<typeof google.maps>((resolve) => {
   const loader = new Loader({
-    apiKey: "AIzaSyBrPsXcvS0lOSrlOQQZQQ0x5IywJvv5PQI",
+    apiKey: "AIzaSyA9Tn60TJL-ZA8o8EXw7-ZHQaLZzOQ4VYg",
     version: "weekly",
     libraries: ["geometry"],
   });
