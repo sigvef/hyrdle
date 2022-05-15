@@ -136,7 +136,7 @@ const Home: NextPage = () => {
     pointA: LatLngLiteral,
     pointB: LatLngLiteral,
     level: number,
-    maps: google.maps.Map
+    maps: typeof google.maps
   ) => {
     const guessedDistance = maps.geometry.spherical.computeDistanceBetween(
       pointA,
@@ -164,6 +164,9 @@ const Home: NextPage = () => {
         JSON.stringify(newMarkers)
       );
       setMarkers(newMarkers);
+    }
+    if (!maps) {
+      return;
     }
     const endGameState = evaluateWinCondition(
       answerPoint,
