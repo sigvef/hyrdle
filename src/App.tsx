@@ -4,6 +4,7 @@ import styles from "./App.module.css";
 import vehicles from "./data.json";
 import { useGoogleMaps } from "./googlemaps";
 import { useDay } from "./utils";
+import logo from "./hyrdle.svg";
 
 import seedrandom from "seedrandom";
 
@@ -207,7 +208,7 @@ const App = () => {
             marginBottom: 32,
           }}
         >
-          <img width={168} height={26} src="/hyrdle.svg" alt="Hyrdle" />
+          <img width={168} height={26} src={logo} alt="Hyrdle" />
         </div>
         <div
           style={{
