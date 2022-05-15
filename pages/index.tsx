@@ -117,17 +117,15 @@ const Home: NextPage = () => {
       if (markers.length < 5) {
         fitMapToCircleBounds(circles[markers.length]);
       }
-      if (markers.length === 5) {
-        const value = evaluateWinCondition(
-          answerPoint,
-          markers[markers.length - 1],
-          5,
-          maps
-        );
+      const value = evaluateWinCondition(
+        answerPoint,
+        markers[markers.length - 1],
+        5,
+        maps
+      );
+      if (value) {
         setMarker(markers[markers.length - 1]);
-        if (value) {
-          endGame(value, markers[markers.length - 1]);
-        }
+        endGame(value, markers[markers.length - 1]);
       }
     }
   }, [maps]);
