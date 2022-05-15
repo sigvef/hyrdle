@@ -8,94 +8,66 @@ import {
 import styles from "../styles/Home.module.css";
 import vehicles from "../data.json";
 import NextImage from "next/image";
+import { useGoogleMaps } from "../googlemaps";
+import { useDay } from "../utils";
+
 var seedrandom = require("seedrandom");
 
-function useLocalStorage<T>(key: string, defaultValue: T) {
-  const storage =
-    typeof window === "undefined"
-      ? { getItem: () => null, setItem: () => null, removeItem: () => null }
-      : localStorage;
-  const [state, _setState] = useState<T>(defaultValue);
-  const setState = (value: T) => {
-    storage.setItem(key, JSON.stringify(value));
-    _setState(value);
-  };
-  return [state, setState] as const;
-}
-
 const Home: NextPage = () => {
-  const dayOffset = 19125 - 4;
-  /* Needs to be a ref so we don't accidentally switch days while playing. */
-  const currentDay = useRef((+new Date() / 1000 / 60 / 60 / 24) | 0);
-  const todaysIndex = currentDay.current - dayOffset;
+  const { dayOffset, currentDay, todaysIndex } = useDay();
 
-  function makeKey(k: string) {
-    return `hyrdle.xyz:${todaysIndex}:${k}`;
-  }
+  const random = useRef(seedrandom(todaysIndex));
 
-  const [markers, setMarkers] = useLocalStorage<
-    {
-      lat: number;
-      lng: number;
-    }[]
-  >(makeKey("markers"), []);
-  const [marker, setMarker] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [circle, setCircle] = useLocalStorage(makeKey("circle"), {
-    center: { lat: 59.95, lng: 10.5 },
-    radius: 600000,
-  });
-  const [gameState, setGameState] = useLocalStorage<"playing" | "win" | "lose">(
-    makeKey("gameState"),
-    "playing"
-  );
+  const { maps } = useGoogleMaps();
 
-  const [redrawForcer, setRedrawForcer] = useState("not-loaded");
-  const forceRedrawAfterMapLoadedOnce = () => {
-    setRedrawForcer("loaded");
-  };
-
-  useEffect(() => {
-    /* Remove old keys. */
-    Object.keys(localStorage)
-      .filter((key) => +key.split(":")[1] < todaysIndex)
-      .forEach((key) => localStorage.removeItem(key));
-
-    for (const [key, setter] of [
-      ["markers", setMarkers],
-      ["circle", setCircle],
-      ["gameState", setGameState],
-    ] as const) {
-      try {
-        const value = JSON.parse(localStorage.getItem(makeKey(key)) || "null");
-        if (value !== null) {
-          setter(value);
-        }
-      } catch {}
-    }
-
-    /* Show your final guess, if you load the page after you are done playing. */
-    const markers = JSON.parse(
-      localStorage.getItem(makeKey("markers")) || "[]"
-    );
-    if (markers.length >= 5) {
-      setMarker(markers.pop());
-    }
-  }, []);
+  const makeLocalStorageKey = (key: string) =>
+    `hyrdle.xyz:${todaysIndex}:${key}`;
 
   const [hasShared, setHasShared] = useState(false);
   const mapRef = useRef<any>(null);
   const currentVehicle = vehicles[todaysIndex];
-  const level = markers.length;
-
-  const random = useRef(seedrandom(todaysIndex));
-
   const answerPoint = {
     lat: currentVehicle.point[1],
     lng: currentVehicle.point[0],
   };
+
+  const [markers, setMarkers] = useState<
+    {
+      lat: number;
+      lng: number;
+    }[]
+  >([]);
+  const [marker, setMarker] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const circles = [
+    {
+      center: { lat: 59.95, lng: 10.5 },
+      radius: 600000,
+    },
+  ];
+  if (maps) {
+    const random = seedrandom(todaysIndex + "circles");
+    for (let i = 0; i < 4; i++) {
+      const previousCircle = circles[circles.length - 1];
+      /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
+      const newRadius = Math.pow(previousCircle.radius, 0.8);
+      const r = newRadius * Math.sqrt(random() * 0.9);
+      const theta = random() * 360;
+      const latLng = maps.geometry.spherical
+        .computeOffset(answerPoint, r, theta)
+        .toJSON();
+      circles.push({ center: latLng, radius: newRadius });
+    }
+  }
+
+  const [gameState, setGameState] = useState<"playing" | "win" | "lose">(
+    "playing"
+  );
+  const level = markers.length;
+
+  const circle = circles[level];
 
   const fitMapToCircleBounds = ({
     center,
@@ -104,7 +76,6 @@ const Home: NextPage = () => {
     center: LatLngLiteral;
     radius: number;
   }) => {
-    const maps = window.google.maps;
     const bounds = getBoundsFromCircle({ center, radius });
     mapRef.current.fitBounds(bounds, 16);
   };
@@ -117,10 +88,7 @@ const Home: NextPage = () => {
         )
       : -1) | 0;
 
-  const endGame = (state: "win" | "lose") => {
-    if (!marker) {
-      return;
-    }
+  const endGame = (state: "win" | "lose", marker: LatLngLiteral) => {
     setGameState(state);
     const dLng = marker.lng - answerPoint.lng;
     const dLat = marker.lat - answerPoint.lat;
@@ -135,56 +103,82 @@ const Home: NextPage = () => {
     }
   };
 
+  /* Load previous state from local storage */
+  useEffect(() => {
+    if (!maps) {
+      return;
+    }
+    const markers = JSON.parse(
+      localStorage.getItem(makeLocalStorageKey("markers")) || "[]"
+    );
+    if (markers.length) {
+      setMarkers(markers);
+      if (markers.length < 5) {
+        fitMapToCircleBounds(circles[markers.length]);
+      }
+      if (markers.length === 5) {
+        const value = evaluateWinCondition(
+          answerPoint,
+          markers[markers.length - 1],
+          5,
+          maps
+        );
+        setMarker(markers[markers.length - 1]);
+        if (value) {
+          endGame(value, markers[markers.length - 1]);
+        }
+      }
+    }
+  }, [maps]);
+
   const isGameDone = gameState === "win" || gameState === "lose";
 
-  const makeGuess = (marker: LatLng) => {
-    const newLevel = level + 1;
-    //@ts-expect-error
-    const maps = google.maps;
-
+  const evaluateWinCondition = (
+    pointA: LatLngLiteral,
+    pointB: LatLngLiteral,
+    level: number,
+    maps: google.maps.Map
+  ) => {
     const guessedDistance = maps.geometry.spherical.computeDistanceBetween(
-      answerPoint,
-      marker
+      pointA,
+      pointB
     );
-    if (marker !== null && markers.length < 5) {
-      setMarkers([...markers, marker]);
+    if (guessedDistance < 50) {
+      return "win";
     }
-    if (guessedDistance <= 50) {
-      endGame("win");
-      return;
-    } else if (newLevel > 4) {
-      endGame("lose");
+    if (level > 4) {
+      return "lose";
+    }
+    return "";
+  };
+
+  const makeGuess = (marker: LatLngLiteral) => {
+    const newLevel = level + 1;
+
+    //@ts-expect-error
+    const geometry = maps.geometry;
+
+    if (marker !== null && markers.length < 5) {
+      const newMarkers = [...markers, marker];
+      localStorage.setItem(
+        makeLocalStorageKey("markers"),
+        JSON.stringify(newMarkers)
+      );
+      setMarkers(newMarkers);
+    }
+    const endGameState = evaluateWinCondition(
+      answerPoint,
+      marker,
+      newLevel,
+      maps
+    );
+    if (endGameState) {
+      endGame(endGameState, marker);
       return;
     }
     setMarker(null);
-
-    /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
-    const newRadius = Math.pow(circle.radius, 0.8);
-    const r = newRadius * Math.sqrt(random.current());
-    const theta = random.current() * 360;
-    //@ts-expect-error
-    const latLng = google.maps.geometry.spherical
-      .computeOffset(answerPoint, r, theta)
-      .toJSON();
-
-    const newCircle = {
-      center: latLng,
-      radius: newRadius,
-    };
-    setCircle(newCircle);
-    fitMapToCircleBounds(newCircle);
+    fitMapToCircleBounds(circles[newLevel]);
   };
-
-  useEffect(() => {
-    try {
-      const markers = JSON.parse(
-        localStorage.getItem(makeKey("markers")) || "null"
-      );
-      markers.forEach((marker) => {
-        makeGuess(marker);
-      });
-    } catch {}
-  }, []);
 
   return (
     <div
@@ -258,22 +252,10 @@ const Home: NextPage = () => {
           }}
         >
           <GameMap
-            onMapMounted={(map: any) => {
-              if (map) {
-                mapRef.current = map;
-                forceRedrawAfterMapLoadedOnce();
-                if (map && circle && circle.radius !== 600000) {
-                  map.fitBounds(getBoundsFromCircle(circle), 16);
-                }
-              }
-            }}
+            onMap={(map) => (mapRef.current = map)}
             circle={isGameDone ? null : circle}
-            marker={marker}
-            carMarker={isGameDone ? answerPoint : null}
-            loadingElement={<div style={{ height: `100%` }} />}
-            containerElement={<div style={{ height: `100%` }} />}
-            mapElement={<div style={{ height: `100%` }} />}
-            googleMapURL="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing,places&key=AIzaSyBrPsXcvS0lOSrlOQQZQQ0x5IywJvv5PQI"
+            marker={marker || undefined}
+            carMarker={isGameDone ? answerPoint : undefined}
             onChange={(latLng) => {
               if (!isGameDone) {
                 setMarker(latLng);
