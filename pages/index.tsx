@@ -16,9 +16,9 @@ var seedrandom = require("seedrandom");
 const Home: NextPage = () => {
   const { dayOffset, currentDay, todaysIndex } = useDay();
 
-  const random = useRef(seedrandom(todaysIndex));
-
   const { maps } = useGoogleMaps();
+
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const makeLocalStorageKey = (key: string) =>
     `hyrdle.xyz:${todaysIndex}:${key}`;
@@ -108,6 +108,7 @@ const Home: NextPage = () => {
     if (!maps) {
       return;
     }
+    setHasLoaded(true);
     const markers = JSON.parse(
       localStorage.getItem(makeLocalStorageKey("markers")) || "[]"
     );
@@ -213,82 +214,93 @@ const Home: NextPage = () => {
         >
           <NextImage width={168} height={26} src="/hyrdle.svg" alt="Hyrdle" />
         </div>
-        {!isGameDone && (
-          <div style={{ marginBottom: 32 }}>
-            Where is today&apos;s car? Find it on the map!
-          </div>
-        )}
-        {!isGameDone && (
-          <div
-            style={{
-              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.16)",
-              width: "100%",
-              aspectRatio: (16 / 9).toString(),
-              borderRadius: 16,
-              background: `#888 url(${currentVehicle.image.replace(
-                "__cover_640x480.jpg",
-                "__cover_1920x1080.jpg"
-              )}) no-repeat center / contain`,
-            }}
-          />
-        )}
-
-        {!isGameDone && (
-          <div style={{ marginTop: 32 }}>
-            The car is somewhere within the blue circle. This is guess number{" "}
-            {level + 1}. You have {5 - level} attempts remaining.
-          </div>
-        )}
-
         <div
           style={{
+            transition: "all 0.15s ease-out",
+            opacity: hasLoaded ? 1 : 0,
+            transform: `translate3d(0px, ${hasLoaded ? 0 : 8}px, 0px)`,
             width: "100%",
-            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.06)",
-            height: 480,
-            marginTop: 32,
-            borderRadius: 16,
-            overflow: "hidden",
-            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
-          <GameMap
-            onMap={(map) => (mapRef.current = map)}
-            circle={isGameDone ? null : circle}
-            marker={marker || undefined}
-            carMarker={isGameDone ? answerPoint : undefined}
-            onChange={(latLng) => {
-              if (!isGameDone) {
-                setMarker(latLng);
-              }
-            }}
-          />
-        </div>
-        {!isGameDone && marker && (
-          <button
-            className={styles.guessButton}
-            style={{ marginTop: -64 - 16, marginBottom: 32 }}
-            onClick={() => makeGuess(marker)}
-          >
-            Make a guess
-          </button>
-        )}
-        {isGameDone && (
+          {!isGameDone && (
+            <div style={{ marginBottom: 32 }}>
+              Where is today&apos;s car? Find it on the map!
+            </div>
+          )}
+          {!isGameDone && (
+            <div
+              style={{
+                boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.16)",
+                width: "100%",
+                aspectRatio: (16 / 9).toString(),
+                borderRadius: 16,
+                background: `#888 url(${currentVehicle.image.replace(
+                  "__cover_640x480.jpg",
+                  "__cover_1920x1080.jpg"
+                )}) no-repeat center / contain`,
+              }}
+            />
+          )}
+
+          {!isGameDone && (
+            <div style={{ marginTop: 32 }}>
+              The car is somewhere within the blue circle. This is guess number{" "}
+              {level + 1}. You have {5 - level} attempts remaining.
+            </div>
+          )}
+
           <div
             style={{
+              width: "100%",
+              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.06)",
+              height: 480,
               marginTop: 32,
-              display: "flex",
-              alignItems: "center",
-              flexDirection: "column",
+              borderRadius: 16,
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            <div style={{ marginBottom: 32 }}>
-              You guessed <strong>{distance}m</strong> away from the car.
-            </div>
+            <GameMap
+              onMap={(map) => (mapRef.current = map)}
+              circle={isGameDone ? null : circle}
+              marker={marker || undefined}
+              carMarker={isGameDone ? answerPoint : undefined}
+              onChange={(latLng) => {
+                if (!isGameDone) {
+                  setMarker(latLng);
+                }
+              }}
+            />
+          </div>
+          {!isGameDone && marker && (
             <button
               className={styles.guessButton}
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `Hyrdle #${todaysIndex}
+              style={{ marginTop: -64 - 16, marginBottom: 32 }}
+              onClick={() => makeGuess(marker)}
+            >
+              Make a guess
+            </button>
+          )}
+          {isGameDone && (
+            <div
+              style={{
+                marginTop: 32,
+                display: "flex",
+                alignItems: "center",
+                flexDirection: "column",
+              }}
+            >
+              <div style={{ marginBottom: 32 }}>
+                You guessed <strong>{distance}m</strong> away from the car.
+              </div>
+              <button
+                className={styles.guessButton}
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `Hyrdle #${todaysIndex}
                 ${[...new Array(5)]
                   .map((_, i) => {
                     if (i === level) {
@@ -301,46 +313,47 @@ const Home: NextPage = () => {
                   })
                   .join("")} ${distance}m
                 https://hyrdle.xyz`
-                    .split("\n")
-                    .map((x) => x.trim())
-                    .join("\n")
-                );
-                setHasShared(true);
-              }}
-            >
-              {hasShared ? "Copied!" : "Share"}
-            </button>
-            <div
-              style={{
-                marginTop: 32,
-                fontWeight: "bold",
-                background: "#ffffff",
-                padding: "16px 32px",
-                borderRadius: 16,
-                color: "#000130",
-              }}
-            >
-              <div>Hyrdle #{todaysIndex}</div>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                {[...new Array(5)].map((_, i) => (
-                  <span key={i} style={{ padding: 2 }}>
-                    {(() => {
-                      if (i === level) {
-                        return gameState === "lose" ? "🟥" : "🟩";
-                      }
-                      if (i <= level) {
-                        return "🟥";
-                      }
-                      return "⬛";
-                    })()}
-                  </span>
-                ))}
-                <strong style={{ paddingLeft: 6 }}>{distance}m</strong>
+                      .split("\n")
+                      .map((x) => x.trim())
+                      .join("\n")
+                  );
+                  setHasShared(true);
+                }}
+              >
+                {hasShared ? "Copied!" : "Share"}
+              </button>
+              <div
+                style={{
+                  marginTop: 32,
+                  fontWeight: "bold",
+                  background: "#ffffff",
+                  padding: "16px 32px",
+                  borderRadius: 16,
+                  color: "#000130",
+                }}
+              >
+                <div>Hyrdle #{todaysIndex}</div>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  {[...new Array(5)].map((_, i) => (
+                    <span key={i} style={{ padding: 2 }}>
+                      {(() => {
+                        if (i === level) {
+                          return gameState === "lose" ? "🟥" : "🟩";
+                        }
+                        if (i <= level) {
+                          return "🟥";
+                        }
+                        return "⬛";
+                      })()}
+                    </span>
+                  ))}
+                  <strong style={{ paddingLeft: 6 }}>{distance}m</strong>
+                </div>
+                <div>https://hyrdle.xyz</div>
               </div>
-              <div>https://hyrdle.xyz</div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <div style={{ height: 128 }} />
       </div>
     </div>
