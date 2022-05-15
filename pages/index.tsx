@@ -304,10 +304,10 @@ const Home: NextPage = () => {
                     `Hyrdle #${todaysIndex}
                 ${[...new Array(5)]
                   .map((_, i) => {
-                    if (i === level) {
+                    if (i === level - 1) {
                       return gameState === "lose" ? "🟥" : "🟩";
                     }
-                    if (i <= level) {
+                    if (i <= level - 1) {
                       return "🟥";
                     }
                     return "⬛";
@@ -338,10 +338,10 @@ const Home: NextPage = () => {
                   {[...new Array(5)].map((_, i) => (
                     <span key={i} style={{ padding: 2 }}>
                       {(() => {
-                        if (i === level) {
+                        if (i === level - 1) {
                           return gameState === "lose" ? "🟥" : "🟩";
                         }
-                        if (i <= level) {
+                        if (i <= level - 1) {
                           return "🟥";
                         }
                         return "⬛";
