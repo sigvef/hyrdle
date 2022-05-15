@@ -173,7 +173,6 @@ const App = () => {
       endGame(endGameState, marker);
       return;
     }
-    setMarker(null);
     fitMapToCircleBounds(circles[newLevel]);
   };
 
