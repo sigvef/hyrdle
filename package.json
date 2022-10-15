@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "update_data": "curl 'https://api.hyre.no/community_vehicle_stations/' | jq '[.results | .[] | {id: .id, point: .vehicle_station.parking_spot.point, image: .vehicle_station.image.url}]' > src/data.json"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.14.2",
