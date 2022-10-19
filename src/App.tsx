@@ -42,12 +42,14 @@ const App = () => {
       radius: 600000,
     },
   ];
+  const [level, setLevel] = useState(0);
   if (maps) {
     const random = seedrandom(todaysIndex + "circles");
-    for (let i = 0; i < 4; i++) {
+    let newRadius = 60000
+    while (newRadius > 50) {
       const previousCircle = circles[circles.length - 1];
       /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
-      const newRadius = Math.pow(previousCircle.radius, 0.8);
+      newRadius = Math.pow(previousCircle.radius, 0.95);
       const r = newRadius * Math.sqrt(random() * 0.9);
       const theta = random() * 360;
       const latLng = maps.geometry.spherical
@@ -60,7 +62,7 @@ const App = () => {
   const [gameState, setGameState] = useState<"playing" | "win" | "lose">(
     "playing"
   );
-  const level = markers.length;
+  const round = markers.length;
 
   const circle = circles[level];
 
@@ -107,18 +109,22 @@ const App = () => {
     const markers = JSON.parse(
       localStorage.getItem(makeLocalStorageKey("markers")) || "[]"
     );
+    const level = JSON.parse(
+      localStorage.getItem(makeLocalStorageKey("level")) || "0"
+    )
     if (markers.length) {
       setMarkers(markers);
       if (markers.length < 5) {
-        fitMapToCircleBounds(circles[markers.length]);
+        fitMapToCircleBounds(circles[level]);
       }
       const value = evaluateWinCondition(
         answerPoint,
         markers[markers.length - 1],
         markers.length,
+        level,
         maps
       );
-      if (value) {
+      if (value === "win" || value === "lose") {
         setMarker(markers[markers.length - 1]);
         endGame(value, markers[markers.length - 1]);
       }
@@ -130,6 +136,7 @@ const App = () => {
   const evaluateWinCondition = (
     pointA: LatLngLiteral,
     pointB: LatLngLiteral,
+    round: number,
     level: number,
     maps: typeof google.maps
   ) => {
@@ -140,14 +147,26 @@ const App = () => {
     if (guessedDistance < 50) {
       return "win";
     }
-    if (level > 4) {
+    if (round >= 4) {
       return "lose";
     }
-    return "";
+
+    // To get the next level, we want to shrink the circle until the first one that is tighter than the guess
+    let newLevel = circles.findIndex(it => it.radius < guessedDistance)
+    // If this somehow doesn't exist (should never happen, because you would have won), we fall back to the smallest one
+    if (newLevel === -1) {
+      newLevel = circles.length - 1;
+    }
+    // If you have managed to make a guess that is further away than the previous radius, we still nudge you
+    // to a smaller circle. (If you guess at the very other end of the circle)
+    if (newLevel <= level) {
+      newLevel = level + 1;
+    }
+
+    return newLevel;
   };
 
   const makeGuess = (marker: LatLngLiteral) => {
-    const newLevel = level + 1;
 
     //@ts-expect-error
     const geometry = maps.geometry;
@@ -163,17 +182,25 @@ const App = () => {
     if (!maps) {
       return;
     }
-    const endGameState = evaluateWinCondition(
+    const nextGameState = evaluateWinCondition(
       answerPoint,
       marker,
-      newLevel,
+      round,
+      level,
       maps
     );
-    if (endGameState) {
-      endGame(endGameState, marker);
+    if (nextGameState === "win" || nextGameState === "lose") {
+      endGame(nextGameState, marker);
       return;
+    } else {
+      const newLevel = nextGameState;
+      localStorage.setItem(
+        makeLocalStorageKey("level"),
+        JSON.stringify(newLevel)
+      )
+      setLevel(newLevel);
+      fitMapToCircleBounds(circles[nextGameState]);
     }
-    fitMapToCircleBounds(circles[newLevel]);
   };
 
   return (
@@ -242,7 +269,7 @@ const App = () => {
           {!isGameDone && (
             <div style={{ marginTop: 32 }}>
               The car is somewhere within the blue circle. This is guess number{" "}
-              {level + 1}. You have {5 - level} attempts remaining.
+              {round + 1}. You have {5 - round} attempts remaining.
             </div>
           )}
 
@@ -298,10 +325,10 @@ const App = () => {
                     `Hyrdle #${todaysIndex}
                 ${[...new Array(5)]
                   .map((_, i) => {
-                    if (i === level - 1) {
+                    if (i === round - 1) {
                       return gameState === "lose" ? "🟥" : "🟩";
                     }
-                    if (i <= level - 1) {
+                    if (i <= round - 1) {
                       return "🟥";
                     }
                     return "⬛";
@@ -332,10 +359,10 @@ const App = () => {
                   {[...new Array(5)].map((_, i) => (
                     <span key={i} style={{ padding: 2 }}>
                       {(() => {
-                        if (i === level - 1) {
+                        if (i === round - 1) {
                           return gameState === "lose" ? "🟥" : "🟩";
                         }
-                        if (i <= level - 1) {
+                        if (i <= round - 1) {
                           return "🟥";
                         }
                         return "⬛";
