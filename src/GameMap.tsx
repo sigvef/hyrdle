@@ -94,8 +94,8 @@ export const GameMap = (props: GameMapProps) => {
     if (carMarker) {
       mapsPromise.then((maps) => {
         mapPromise.then((map) => {
-          const obj = (carMarkerObj.current =
-            carMarkerObj.current || new maps.Marker({ zIndex: 9 }));
+          const obj = (carMarkerObj.current = carMarkerObj.current || new maps.Marker({ zIndex: 9, icon:{url:'/markers/p-circle.png', scaledSize: new maps.Size(30, 30), anchor: new google.maps.Point(15, 15),
+} }));
           obj.setPosition(carMarker);
           obj.setMap(map);
         });
@@ -110,7 +110,10 @@ export const GameMap = (props: GameMapProps) => {
         mapPromise.then((map) => {
           const obj =
             markerObj.current ||
-            new maps.Marker({ zIndex: 10, draggable: true });
+            new maps.Marker({ zIndex: 10, draggable: true, icon: {url:'/markers/geo-alt.png', scaledSize: new maps.Size(30, 30),
+                            anchor: new google.maps.Point(15, 30),
+
+          }});
           if (!markerObj.current) {
             obj.addListener("dragEnd", (e: any) =>
               props.onChange?.(e.latLng.toJSON())
