@@ -134,15 +134,15 @@ const App = () => {
   const isGameDone = gameState === "win" || gameState === "lose";
 
   const evaluateWinCondition = (
-    pointA: LatLngLiteral,
-    pointB: LatLngLiteral,
+    correctAnswer: LatLngLiteral,
+    currentGuess: LatLngLiteral,
     round: number,
     level: number,
     maps: typeof google.maps
   ) => {
     const guessedDistance = maps.geometry.spherical.computeDistanceBetween(
-      pointA,
-      pointB
+      correctAnswer,
+      currentGuess,
     );
     if (guessedDistance < 50) {
       return "win";
@@ -151,16 +151,26 @@ const App = () => {
       return "lose";
     }
 
-    // To get the next level, we want to shrink the circle until the first one that is tighter than the guess
-    let newLevel = circles.findIndex(it => it.radius < guessedDistance)
+    // To get the next level, we want to shrink the circle until the first one that satisfies:
+    // 1) The radius is smaller than our guess distance (so that a good guess gives a small circle)
+    // 2) The guess is outside of the circle (so that it feels like you have tightened the area)
+    let newLevel = circles.findIndex(it => {
+      const circleIsSmallerThanGuessDistance = it.radius <= guessedDistance;
+      const distanceFromCenterOfCircle = maps.geometry.spherical.computeDistanceBetween(
+        it.center,
+        currentGuess,
+      );
+      const circleDoesNotContainGuess = distanceFromCenterOfCircle >= it.radius;
+      return circleIsSmallerThanGuessDistance && circleDoesNotContainGuess;
+    })
     // If this somehow doesn't exist (should never happen, because you would have won), we fall back to the smallest one
     if (newLevel === -1) {
       newLevel = circles.length - 1;
     }
-    // If you have managed to make a guess that is further away than the previous radius, we still nudge you
-    // to a smaller circle. (If you guess at the very other end of the circle)
-    if (newLevel <= level) {
-      newLevel = level + 1;
+    // If you have managed to make a guess that isn't even good enough to shrink the circle by two sizes,
+    // we nudge you to a noticably smaller circle. (e.g. if you guess at the very other end of the circle)
+    if (newLevel <= level + 1) {
+      newLevel = level + 2;
     }
 
     return newLevel;
