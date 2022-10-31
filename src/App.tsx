@@ -46,7 +46,7 @@ const App = () => {
   if (maps) {
     const random = seedrandom(todaysIndex + "circles");
     let newRadius = 60000
-    while (newRadius > 50) {
+    while (newRadius >= 25) {
       const previousCircle = circles[circles.length - 1];
       /* Find random point in circle with radius away from real answer. That point is now the circle's new midpoint. */
       newRadius = Math.pow(previousCircle.radius, 0.95);
